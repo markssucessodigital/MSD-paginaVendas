@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { mockData } from './data/mock';
 import Hero from './components/Hero';
 import Problems from './components/Problems';
@@ -17,125 +16,149 @@ import Objections from './components/Objections';
 import FinalCTA from './components/FinalCTA';
 import Footer from './components/Footer';
 import StickyFloatingCTA from './components/StickyFloatingCTA';
-import LeadFormModal from './components/LeadFormModal';
-import AdminDashboard from './components/AdminDashboard';
-import LoginPage from './components/LoginPage';
-import PrivateRoute from './components/PrivateRoute';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
-import { initGA, initFBPixel, trackCTAClick, initScrollTracking, trackTimeOnPage } from './utils/analytics';
-
-function LandingPage({ onCTAClick }) {
-  return (
-    <>
-      <Hero data={mockData.hero} onCTAClick={() => onCTAClick('hero')} />
-      <Problems data={mockData.problems} />
-      <CTASection
-        title="Identificou Seu Negócio Nesses Desafios?"
-        subtitle="Não deixe esses problemas travarem seu crescimento. Agende um diagnóstico estratégico gratuito."
-        ctaText="Quero Resolver Esses Problemas"
-        variant="default"
-        onCTAClick={() => onCTAClick('after_problems')}
-      />
-      <StrategicVision data={mockData.strategicVision} />
-      <Method data={mockData.method} />
-      <CTASection
-        title="Pronto Para Implementar o Método M.D.S?"
-        subtitle="Estruture seu negócio digital em 30 dias com metodologia comprovada."
-        ctaText="Quero Implementar o Método M.D.S"
-        variant="light"
-        onCTAClick={() => onCTAClick('after_method')}
-      />
-      <PillarsConnection data={mockData.pillarsConnection} />
-      <Implementation data={mockData.implementation} />
-      <Benefits data={mockData.benefits} />
-      <Applications data={mockData.applications} />
-      <Differential data={mockData.differential} />
-      <CTASection
-        title="Escolha Engenharia, Não Agência Comum"
-        subtitle="Trabalhe com quem estrutura crescimento de verdade, não só executa tarefas."
-        ctaText="Quero Engenharia de Crescimento"
-        variant="default"
-        onCTAClick={() => onCTAClick('after_differential')}
-      />
-      <SocialProof data={mockData.socialProof} />
-      <Objections data={mockData.objections} />
-      <FinalCTA data={mockData.finalCTA} onCTAClick={() => onCTAClick('final_cta')} />
-      <Footer data={mockData.footer} />
-    </>
-  );
-}
 
 function App() {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [showLeadForm, setShowLeadForm] = useState(false);
-  const [ctaSource, setCtaSource] = useState('');
 
   useEffect(() => {
     setIsLoaded(true);
     
-    // Initialize analytics
-    initGA();
-    initFBPixel();
-    
-    // Initialize tracking
-    const cleanupScroll = initScrollTracking();
-    const cleanupTime = trackTimeOnPage();
-    
-    console.log('📊 Analytics initialized');
-    
-    return () => {
-      cleanupScroll();
-      cleanupTime();
-    };
+    // Initialize Google Analytics (se tiver)
+    const GA_ID = process.env.REACT_APP_GA_MEASUREMENT_ID;
+    if (GA_ID && GA_ID !== 'G-XXXXXXXXXX') {
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+      document.head.appendChild(script);
+
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { window.dataLayer.push(arguments); }
+      window.gtag = gtag;
+      gtag('js', new Date());
+      gtag('config', GA_ID);
+      console.log('📊 Google Analytics initialized');
+    }
+
+    // Initialize Facebook Pixel (se tiver)
+    const FB_PIXEL = process.env.REACT_APP_FB_PIXEL_ID;
+    if (FB_PIXEL && FB_PIXEL !== 'YOUR_PIXEL_ID') {
+      !function(f,b,e,v,n,t,s) {
+        if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)
+      }(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      window.fbq('init', FB_PIXEL);
+      window.fbq('track', 'PageView');
+      console.log('📊 Facebook Pixel initialized');
+    }
   }, []);
 
   const handleCTAClick = (source = 'generic') => {
-    // Track CTA click
-    trackCTAClick(`CTA: ${source}`, source);
+    // Track event
+    if (window.gtag) {
+      window.gtag('event', 'cta_click', {
+        event_category: 'engagement',
+        event_label: source
+      });
+    }
+    if (window.fbq) {
+      window.fbq('trackCustom', 'CTAClick', { source: source });
+    }
+
+    // WhatsApp redirect
+    const whatsappNumber = mockData.whatsapp.number;
+    const whatsappMessage = encodeURIComponent(mockData.whatsapp.message);
+    const whatsappURL = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
     
-    setCtaSource(source);
-    setShowLeadForm(true);
-    
-    // Show toast notification
-    toast.info('Preencha o formulário', {
-      description: 'Entraremos em contato em até 24h.',
-      duration: 3000,
+    toast.success('Redirecionando para WhatsApp...', {
+      description: 'Vamos te atender agora!',
+      duration: 2000,
     });
+    
+    setTimeout(() => {
+      window.open(whatsappURL, '_blank');
+    }, 500);
   };
 
   return (
-    <BrowserRouter>
-      <div className={`App ${isLoaded ? 'loaded' : ''}`}>
-        <Routes>
-          <Route path="/" element={<LandingPage onCTAClick={handleCTAClick} />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route 
-            path="/admin" 
-            element={
-              <PrivateRoute>
-                <AdminDashboard />
-              </PrivateRoute>
-            } 
-          />
-        </Routes>
-          
-          {/* Sticky Floating CTA - Only on landing page */}
-          {window.location.pathname === '/' && (
-            <StickyFloatingCTA onCTAClick={() => handleCTAClick('sticky_floating')} />
-          )}
-          
-          {/* Lead Form Modal */}
-          <LeadFormModal
-            isOpen={showLeadForm}
-            onClose={() => setShowLeadForm(false)}
-            source={ctaSource}
-          />
-          
-          {/* Toast Notifications */}
-          <Toaster position="top-right" />
-        </div>
-      </BrowserRouter>
+    <div className={`App ${isLoaded ? 'loaded' : ''}`}>
+      {/* Hero Section */}
+      <Hero data={mockData.hero} onCTAClick={() => handleCTAClick('hero')} />
+      
+      {/* Problems Section */}
+      <Problems data={mockData.problems} />
+      
+      {/* CTA 1 */}
+      <CTASection
+        title="Identificou Seu Negócio Nesses Desafios?"
+        subtitle="Não deixe esses problemas travarem seu crescimento. Fale conosco agora!"
+        ctaText="Quero Resolver Esses Problemas"
+        variant="default"
+        onCTAClick={() => handleCTAClick('after_problems')}
+      />
+      
+      {/* Strategic Vision Section */}
+      <StrategicVision data={mockData.strategicVision} />
+      
+      {/* Method M.D.S Section */}
+      <Method data={mockData.method} />
+      
+      {/* CTA 2 */}
+      <CTASection
+        title="Pronto Para Implementar o Método M.D.S?"
+        subtitle="Entre em contato e vamos estruturar seu crescimento em 30 dias."
+        ctaText="Quero Implementar o Método M.D.S"
+        variant="light"
+        onCTAClick={() => handleCTAClick('after_method')}
+      />
+      
+      {/* Pillars Connection Section */}
+      <PillarsConnection data={mockData.pillarsConnection} />
+      
+      {/* Implementation Section */}
+      <Implementation data={mockData.implementation} />
+      
+      {/* Benefits Section */}
+      <Benefits data={mockData.benefits} />
+      
+      {/* Applications Section */}
+      <Applications data={mockData.applications} />
+      
+      {/* Differential Section */}
+      <Differential data={mockData.differential} />
+      
+      {/* CTA 3 */}
+      <CTASection
+        title="Escolha Engenharia, Não Agência Comum"
+        subtitle="Fale com quem estrutura crescimento de verdade."
+        ctaText="Quero Engenharia de Crescimento"
+        variant="default"
+        onCTAClick={() => handleCTAClick('after_differential')}
+      />
+      
+      {/* Social Proof Section */}
+      <SocialProof data={mockData.socialProof} />
+      
+      {/* Objections/FAQ Section */}
+      <Objections data={mockData.objections} />
+      
+      {/* Final CTA Section */}
+      <FinalCTA data={mockData.finalCTA} onCTAClick={() => handleCTAClick('final_cta')} />
+      
+      {/* Footer */}
+      <Footer data={mockData.footer} />
+      
+      {/* Sticky Floating CTA */}
+      <StickyFloatingCTA onCTAClick={() => handleCTAClick('sticky_floating')} />
+      
+      {/* Toast Notifications */}
+      <Toaster position="top-right" />
+    </div>
   );
 }
 
